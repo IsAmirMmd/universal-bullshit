@@ -1,4 +1,3 @@
-/* نسخه‌ی اصلی تمرین ۲: Parent بدون wait() می‌خوابد و Child به Zombie تبدیل می‌شود. */
 #include <stdio.h>
 #include <unistd.h>
 

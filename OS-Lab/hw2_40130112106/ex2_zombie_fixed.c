@@ -1,4 +1,3 @@
-/* نسخه‌ی اصلاح‌شده‌ی تمرین ۲: Parent پایان Child را با waitpid() جمع‌آوری می‌کند. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -17,7 +16,7 @@ int main(void) {
     }
     else {
         int status;
-        pid_t done = waitpid(pid, &status, 0);   /* همان wait(&status) برای یک Child مشخص */
+        pid_t done = waitpid(pid, &status, 0);
 
         if (done < 0) {
             perror("waitpid");

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="fa">
+<head>
+<meta charset="utf-8">
+<title>گزارش کار آزمایشگاه سیستم‌عامل، جلسه‌ی دوم</title>
+<style>
+  @font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Regular.ttf"); font-weight: 400; }
+  @font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Bold.ttf"); font-weight: 700; }
+
+  @page { size: A4; margin: 2cm 2cm 1.8cm; }
+
+  html { background: #fff; }
+  body {
+    font-family: "Vazirmatn", Tahoma, sans-serif;
+    font-size: 11.5pt;
+    line-height: 1.9;
+    color: #111;
+    max-width: 17cm;
+    margin: 0 auto;
+    padding: 1.5cm 0;
+  }
+  @media print { body { padding: 0; max-width: none; } }
+
+  header { text-align: center; margin-bottom: 1.4em; padding-bottom: 1em; border-bottom: 1px solid #999; }
+  header h1 { font-size: 17pt; margin: 0 0 .2em; line-height: 1.5; }
+  header .sub { font-size: 12.5pt; margin: 0 0 .5em; }
+  header .meta { font-size: 10.5pt; color: #333; margin: 0; }
+
+  h2 { font-size: 14pt; margin: 1.6em 0 .4em; line-height: 1.5; }
+  h3 { font-size: 11.5pt; margin: 1.1em 0 .3em; line-height: 1.5; }
+  h2, h3 { break-after: avoid; }
+  h2 { direction: ltr; text-align: right; }
+  p { margin: 0 0 .7em; text-align: justify; orphans: 2; widows: 2; }
+
+  code, .ltr {
+    direction: ltr; unicode-bidi: isolate;
+    font-family: "Vazirmatn", Tahoma, sans-serif; font-size: 1em;
+  }
+  pre {
+    direction: ltr; text-align: left;
+    font-family: "Vazirmatn", Tahoma, sans-serif;
+    font-size: 8.6pt; line-height: 1.42;
+    background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px;
+    padding: .7em .9em; margin: .3em 0 1em;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+  }
+  pre { orphans: 8; widows: 4; }
+  pre code { font-size: inherit; white-space: inherit; }
+  p code, h3 code { white-space: nowrap; }
+
+  figure { margin: .8em 0 1.1em; text-align: center; break-inside: avoid; }
+  figure img { max-width: 100%; width: 88%; }
+  figure.tree img { width: 58%; }
+
+  .page-break { break-before: page; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>گزارش کار آزمایشگاه سیستم‌عامل</h1>
+  <p class="sub">جلسه‌ی دوم: فراخوانی‌های سیستمی مدیریت فرآیند</p>
+  <p class="meta">شماره‌ی دانشجویی: <span class="ltr">40130112106</span></p>
+</header>
+
+<!-- ───────────── 1 ───────────── -->
+<h2>1.</h2>
+
+<p>عبارت <code>Hello</code> چهار بار چاپ می‌شود. فراخوانی اول <code>fork()</code> از فرآیند اصلی <code>P</code> فرزند <code>C1</code> را می‌سازد و هر دو فرآیند از خط بعد ادامه می‌دهند. به همین دلیل <code>fork()</code> دوم دو بار اجرا می‌شود: یک بار در <code>P</code> که <code>C2</code> را می‌سازد و یک بار در <code>C1</code> که <code>C3</code> را می‌سازد.</p>
+
+<p>در پایان چهار فرآیند وجود دارد و هر کدام یک بار به <code>printf</code> می‌رسد. هر <code>fork()</code> که همه‌ی فرآیندها از آن عبور کنند تعدادشان را دو برابر می‌کند، پس <span class="ltr">n</span> فراخوانی پشت سر هم <span class="ltr">2ⁿ</span> فرآیند می‌سازد؛ اینجا <span class="ltr">2² = 4</span>.</p>
+
+<figure class="tree">
+  <img src="img/tree.png" alt="درخت فرآیندها">
+</figure>
+
+<!-- ───────────── 2 ───────────── -->
+<h2>2.</h2>
+
+<h3>الف) مشاهده‌ی Zombie</h3>
+
+<p>در ده ثانیه‌ای که والد در <code>sleep(10)</code> بود، وضعیت فرآیندها در ترمینال دوم بررسی شد. فرآیند 4823 همان فرزند است، چون <code>PPID</code> آن با شناسه‌ی والد (4822) برابر است. وضعیت این فرآیند <code>Z</code> و نامش <code>&lt;defunct&gt;</code> است. یعنی فرزند تمام شده ولی والد هنوز <code>wait()</code> را صدا نزده، پس ردیف آن در جدول فرآیندها باقی مانده است. خط دوم خروجی <code>grep</code> مربوط به خود دستور <code>grep</code> است، نه یک Zombie.</p>
+
+<figure>
+  <img src="img/term_zombie.png" alt="مشاهده‌ی Zombie با ps">
+</figure>
+
+<h3>ب) نسخه‌ی اصلاح‌شده با <code>wait()</code></h3>
+
+<p>در این نسخه والد پیش از <code>sleep</code> منتظر پایان فرزند می‌ماند و <code>exit status</code> آن را می‌خواند. برای یک فرزند مشخص، <code>waitpid(pid, &amp;status, 0)</code> همان کار <code>wait(&amp;status)</code> را انجام می‌دهد.</p>
+
+<pre><code>{{ex2_zombie_fixed.c}}</code></pre>
+
+<p>این بار هیچ فرآیندی با وضعیت <code>Z</code> دیده نمی‌شود و <code>ps</code> فقط خود والد را نشان می‌دهد.</p>
+
+<figure>
+  <img src="img/term_zombie_fixed.png" alt="اجرای نسخه‌ی اصلاح‌شده">
+</figure>
+
+<!-- ───────────── 3 ───────────── -->
+<h2>3.</h2>
+
+<pre><code>{{ex3_two_children.c}}</code></pre>
+
+<h3>خروجی</h3>
+
+<figure>
+  <img src="img/term_two_children.png" alt="اجرای همزمان دو فرزند">
+</figure>
+
+<p>والد هر دو فرزند را پشت سر هم و بدون انتظار می‌سازد، پس <code>sleep 5</code> و <code>date</code> همزمان اجرا می‌شوند. دستور <code>date</code> زودتر تمام می‌شود و شناسه‌ی آن (5212) اول چاپ می‌شود؛ حدود پنج ثانیه بعد نوبت فرزند اول (5211) است. کل اجرا هم حدود پنج ثانیه طول کشید، یعنی به اندازه‌ی طولانی‌ترین فرزند. اگر والد بین دو <code>fork</code> منتظر می‌ماند، <code>date</code> فقط بعد از تمام شدن <code>sleep 5</code> اجرا می‌شد.</p>
+
+<!-- ───────────── 4 ───────────── -->
+<h2>4.</h2>
+
+<pre><code>{{ex4_minishell.c}}</code></pre>
+
+<h3>خروجی</h3>
+
+<figure>
+  <img src="img/term_minishell.png" alt="اجرای minishell">
+</figure>
+
+<p>دستور <code>cd</code> به‌صورت داخلی (built-in) و با <code>chdir()</code> در خود Shell اجرا می‌شود، چون اگر در فرزند اجرا شود فقط directory همان فرزند عوض می‌شود و Shell در مسیر قبلی می‌ماند. برای همین بعد از <code>cd /tmp</code>، دستور <code>pwd</code> مسیر <code>/tmp</code> را نشان می‌دهد. بعد از <code>sleep 10 &amp;</code> هم prompt بلافاصله برمی‌گردد و پیام <code>[done]</code> پس از تمام شدن <code>sleep</code> چاپ می‌شود.</p>
+
+<h3>تشخیص و حذف <code>&amp;</code> از <code>argv</code></h3>
+
+<p>ورودی با <code>strtok()</code> به آرگومان‌ها شکسته می‌شود و سپس آخرین آرگومان بررسی می‌شود. اگر این آرگومان دقیقاً <code>&amp;</code> باشد، متغیر <code>background</code> برابر 1 می‌شود و دستور <code>args[--argc] = NULL</code> آن را از آرایه حذف می‌کند. اگر <code>&amp;</code> به آخر آرگومان چسبیده باشد (مثل <code>10&amp;</code>)، کاراکتر آخر با <code>'\0'</code> جایگزین می‌شود. در هر دو حالت <code>execvp()</code> آرایه‌ی <code>{"sleep", "10", NULL}</code> را دریافت می‌کند.</p>
+
+<p>برای دستور Background والد منتظر نمی‌ماند و فقط شناسه‌ی فرزند را چاپ می‌کند. دستورهای عادی با <code>waitpid(pid, NULL, 0)</code> منتظر همان فرزند می‌مانند تا با فرزندهای پس‌زمینه اشتباه گرفته نشوند. فرزندهای پس‌زمینه‌ای که تمام شده‌اند هم پیش از هر prompt با <code>waitpid(-1, &amp;status, WNOHANG)</code> جمع‌آوری می‌شوند تا Zombie نشوند.</p>
+
+<!-- ───────────── 5 ───────────── -->
+<h2>5.</h2>
+
+<p>در این جلسه سه فراخوانی <code>fork()</code>، <code>exec()</code> و <code>wait()</code> کنار هم قرار گرفتند: <code>fork()</code> فرزند را می‌سازد، <code>exec()</code> برنامه‌ی دیگری را بدون تغییر شناسه در آن اجرا می‌کند و <code>wait()</code> پایان فرزند را به والد خبر می‌دهد. minishell تمرین 4 از همین سه فراخوانی ساخته شده است.</p>
+
+<p>بیشترین مشکل در تمرین 4 پیش آمد. اجرای <code>cd</code> در فرزند هیچ اثری روی Shell نداشت و راه‌حل آن اجرای <code>chdir()</code> در خود Shell بود. علامت <code>&amp;</code> هم باید پیش از <code>execvp()</code> حذف می‌شد، وگرنه برنامه‌ی مقصد آن را آرگومان خودش می‌دید. فرزندهای پس‌زمینه نیز بدون جمع‌آوری Zombie می‌شدند که با <code>WNOHANG</code> حل شد. در تمرین 2 هم تشخیص Zombie واقعی از خط مربوط به خود <code>grep</code> با نگاه به ستون‌های <code>STAT</code> و <code>PPID</code> ممکن شد.</p>
+
+</body>
+</html>

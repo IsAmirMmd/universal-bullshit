@@ -1,4 +1,3 @@
-/* تمرین ۳: ایجاد دو Child بدون انتظار بین آن‌ها، سپس انتظار برای هر دو. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -7,7 +6,6 @@
 int main(void) {
     pid_t pid1, pid2;
 
-    /* Child اول: sleep 5 */
     pid1 = fork();
     if (pid1 < 0) {
         perror("fork");
@@ -19,11 +17,10 @@ int main(void) {
         _exit(1);
     }
 
-    /* Child دوم: date — بلافاصله بعد از Child اول و بدون wait() */
     pid2 = fork();
     if (pid2 < 0) {
         perror("fork");
-        waitpid(pid1, NULL, 0);     /* Child اول را رها نمی‌کنیم */
+        waitpid(pid1, NULL, 0);
         return 1;
     }
     if (pid2 == 0) {
@@ -35,7 +32,6 @@ int main(void) {
     printf("Parent (PID=%d): child1 PID=%d (sleep 5), child2 PID=%d (date)\n",
            getpid(), pid1, pid2);
 
-    /* حالا وارد مرحله‌ی انتظار می‌شویم: دو بار wait() برای دو Child */
     for (int i = 0; i < 2; i++) {
         int status;
         pid_t done = wait(&status);

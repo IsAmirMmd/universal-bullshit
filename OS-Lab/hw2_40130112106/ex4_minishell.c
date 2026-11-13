@@ -1,4 +1,3 @@
-/* تمرین ۴: minishell با پشتیبانی از cd (داخل خود Shell) و اجرای Background با & */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,7 +8,6 @@
 #define MAX_CMD  256
 #define MAX_ARGS 64
 
-/* جمع‌آوری Childهای Background که تمام شده‌اند، بدون block شدن (جلوگیری از Zombie) */
 static void reap_background(void) {
     int status;
     pid_t pid;
@@ -34,7 +32,6 @@ int main(void) {
         }
         input[strcspn(input, "\n")] = '\0';
 
-        /* شکستن ورودی به آرگومان‌ها */
         int argc = 0;
         char *token = strtok(input, " \t");
         while (token != NULL && argc < MAX_ARGS - 1) {
@@ -46,12 +43,11 @@ int main(void) {
         if (argc == 0)
             continue;
 
-        /* تشخیص & در انتهای command و حذف آن از argv */
         int background = 0;
-        if (strcmp(args[argc - 1], "&") == 0) {          /* حالت: sleep 10 & */
+        if (strcmp(args[argc - 1], "&") == 0) {
             background = 1;
             args[--argc] = NULL;
-        } else {                                          /* حالت: sleep 10& */
+        } else {
             size_t len = strlen(args[argc - 1]);
             if (len > 1 && args[argc - 1][len - 1] == '&') {
                 background = 1;
@@ -59,10 +55,9 @@ int main(void) {
             }
         }
 
-        if (argc == 0)          /* ورودی فقط «&» بوده */
+        if (argc == 0)
             continue;
 
-        /* دستورات داخلی (built-in) که باید در خود Shell اجرا شوند */
         if (strcmp(args[0], "exit") == 0)
             break;
 
@@ -75,7 +70,6 @@ int main(void) {
             continue;
         }
 
-        /* دستورات خارجی: fork + execvp */
         pid_t pid = fork();
 
         if (pid < 0) {
@@ -88,10 +82,10 @@ int main(void) {
             _exit(127);
         }
         else if (background) {
-            printf("[bg] started PID %d\n", pid);  /* منتظر نمی‌مانیم */
+            printf("[bg] started PID %d\n", pid);
         }
         else {
-            if (waitpid(pid, NULL, 0) < 0)          /* فقط همین Child، نه Childهای Background */
+            if (waitpid(pid, NULL, 0) < 0)
                 perror("waitpid");
         }
     }

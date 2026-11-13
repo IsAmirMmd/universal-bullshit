@@ -125,7 +125,6 @@ Parent: Exiting without wait.        ← بعد از ۱۰ ثانیه
 
 ```
 $ ps aux | grep Z
-USER   PID   %CPU %MEM  VSZ  RSS TTY    STAT START TIME COMMAND
 amir   4823  0.0  0.0     0    0 pts/0  Z+   21:10 0:00 [zombie_example] <defunct>
 amir   4830  0.0  0.0  6480 2280 pts/1  S+   21:10 0:00 grep --color=auto Z
 ```
