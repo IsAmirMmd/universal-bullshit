@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>File Manager</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font: 13px/1.4 "Segoe UI", Tahoma, Arial, "Vazirmatn", sans-serif;
+    color: #333; background: #f3f4f6;
+    display: flex; flex-direction: column;
+  }
+  header {
+    background: #293a4a; color: #fff; padding: 8px 14px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  header h1 { font-size: 16px; font-weight: 600; margin: 0; }
+  header .repo { color: #9fb3c8; font-size: 12px; margin-left: auto; }
+  header .repo a { color: #9fb3c8; }
+
+  .toolbar {
+    background: #fff; border-bottom: 1px solid #d5d9de;
+    padding: 6px 10px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+  }
+  .toolbar button {
+    border: 1px solid transparent; background: none; padding: 4px 9px;
+    border-radius: 3px; cursor: pointer; font: inherit; color: #333;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .toolbar button:hover:not(:disabled) { background: #eef2f6; border-color: #c9d1da; }
+  .toolbar button:disabled { color: #aaa; cursor: default; }
+  .toolbar .sep { width: 1px; height: 22px; background: #d5d9de; margin: 0 4px; }
+  .toolbar .search { margin-left: auto; display: flex; gap: 4px; }
+  .toolbar input[type=search] {
+    border: 1px solid #c9d1da; border-radius: 3px; padding: 4px 8px; width: 220px; font: inherit;
+  }
+
+  .main { flex: 1; display: flex; min-height: 0; }
+  .tree {
+    width: 260px; flex: none; background: #fff; border-right: 1px solid #d5d9de;
+    overflow: auto; padding: 8px 4px;
+  }
+  .tree ul { list-style: none; margin: 0; padding-left: 16px; }
+  .tree > ul { padding-left: 0; }
+  .tree li > div {
+    display: flex; align-items: center; gap: 4px; padding: 2px 4px;
+    cursor: pointer; border-radius: 3px; white-space: nowrap;
+  }
+  .tree li > div:hover { background: #eef2f6; }
+  .tree li > div.active { background: #d8e8f8; font-weight: 600; }
+  .tree .tw { width: 12px; text-align: center; color: #777; font-size: 10px; flex: none; }
+  .tree li.closed > ul { display: none; }
+
+  .pane { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .pathbar {
+    display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+    background: #fafbfc; border-bottom: 1px solid #d5d9de;
+  }
+  .pathbar .crumbs { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .pathbar .crumbs a { color: #1a6fb5; text-decoration: none; cursor: pointer; }
+  .pathbar .crumbs a:hover { text-decoration: underline; }
+  .pathbar .crumbs span.s { color: #999; margin: 0 4px; }
+
+  .list { flex: 1; overflow: auto; background: #fff; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    position: sticky; top: 0; background: #eef1f4; text-align: left; font-weight: 600;
+    border-bottom: 1px solid #d5d9de; padding: 6px 8px; cursor: pointer; user-select: none;
+    white-space: nowrap;
+  }
+  thead th.nosort { cursor: default; }
+  thead th .arrow { color: #888; font-size: 10px; }
+  tbody td { padding: 5px 8px; border-bottom: 1px solid #f0f1f3; white-space: nowrap; }
+  tbody tr { cursor: default; }
+  tbody tr:hover { background: #f5f9fd; }
+  tbody tr.sel { background: #d8e8f8; }
+  td.name { width: 55%; max-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  td.name a { color: inherit; text-decoration: none; }
+  td.name a:hover { color: #1a6fb5; text-decoration: underline; }
+  td.size, th.size { text-align: right; }
+  td.muted { color: #777; }
+  .ico { display: inline-block; width: 18px; text-align: center; margin-right: 4px; }
+  .empty { padding: 30px; text-align: center; color: #888; }
+  .chk { width: 28px; }
+
+  footer {
+    background: #fafbfc; border-top: 1px solid #d5d9de; padding: 4px 12px;
+    font-size: 12px; color: #666; display: flex; gap: 16px;
+  }
+
+  .modal {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    display: none; align-items: center; justify-content: center; z-index: 10;
+  }
+  .modal.open { display: flex; }
+  .modal .box {
+    background: #fff; width: min(1000px, 94vw); height: 88vh; border-radius: 4px;
+    display: flex; flex-direction: column; box-shadow: 0 8px 30px rgba(0,0,0,.3);
+  }
+  .modal .bar {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    background: #293a4a; color: #fff; border-radius: 4px 4px 0 0;
+  }
+  .modal .bar .t { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .modal .bar a, .modal .bar button {
+    color: #fff; background: #3d5368; border: none; padding: 4px 10px; border-radius: 3px;
+    cursor: pointer; text-decoration: none; font: inherit;
+  }
+  .modal .content { flex: 1; overflow: auto; background: #fafafa; }
+  .modal pre {
+    margin: 0; padding: 12px 14px; font: 13px/1.5 Consolas, "Cascadia Mono", monospace;
+    white-space: pre-wrap; word-break: break-word; unicode-bidi: plaintext;
+  }
+  .modal img { display: block; max-width: 100%; margin: 12px auto; }
+  .modal iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  @media (max-width: 760px) {
+    .tree { display: none; }
+    td.type, th.type { display: none; }
+    .toolbar .search { margin-left: 0; width: 100%; }
+    .toolbar input[type=search] { flex: 1; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>&#128193; File Manager</h1>
+  <span class="repo" id="repo"></span>
+</header>
+
+<div class="toolbar">
+  <button id="bHome" title="Home">&#127968; Home</button>
+  <button id="bUp" title="Up one level">&#11014; Up One Level</button>
+  <button id="bBack" title="Back">&#9664; Back</button>
+  <button id="bFwd" title="Forward">&#9654; Forward</button>
+  <button id="bReload" title="Reload">&#10227; Reload</button>
+  <span class="sep"></span>
+  <button id="bSelAll">&#9745; Select All</button>
+  <button id="bUnsel">&#9744; Unselect All</button>
+  <span class="sep"></span>
+  <button id="bView" disabled>&#128065; View</button>
+  <button id="bDl" disabled>&#11015; Download</button>
+  <button id="bZip" disabled>&#128230; Download as ZIP</button>
+  <div class="search">
+    <input type="search" id="q" placeholder="Search all files…">
+  </div>
+</div>
+
+<div class="main">
+  <nav class="tree" id="tree"></nav>
+  <section class="pane">
+    <div class="pathbar">
+      <span class="crumbs" id="crumbs"></span>
+    </div>
+    <div class="list">
+      <table>
+        <thead>
+          <tr>
+            <th class="chk nosort"><input type="checkbox" id="chkAll"></th>
+            <th data-k="name">Name <span class="arrow"></span></th>
+            <th data-k="size" class="size">Size <span class="arrow"></span></th>
+            <th data-k="mtime">Last Modified <span class="arrow"></span></th>
+            <th data-k="type" class="type">Type <span class="arrow"></span></th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty" hidden>This directory is empty.</div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <span id="stat"></span>
+  <span id="selstat"></span>
+  <span id="gen" style="margin-left:auto"></span>
+</footer>
+
+<div class="modal" id="modal">
+  <div class="box">
+    <div class="bar">
+      <span class="t" id="mTitle"></span>
+      <a id="mOpen" target="_blank" rel="noopener">Open in new tab</a>
+      <a id="mDl" download>Download</a>
+      <button id="mClose">Close &#10005;</button>
+    </div>
+    <div class="content" id="mBody"></div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const TEXT_EXT = new Set(["md","txt","c","h","cpp","hpp","py","js","ts","json","css","sh","bash",
+    "yml","yaml","xml","csv","java","go","rs","sql","ini","toml","cfg","log","s","asm","makefile","tex"]);
+  const IMG_EXT = new Set(["png","jpg","jpeg","gif","webp","svg","bmp","ico"]);
+  const TYPES = {
+    pdf: ["&#128213;", "PDF document"], pptx: ["&#128202;", "PowerPoint"], ppt: ["&#128202;", "PowerPoint"],
+    docx: ["&#128216;", "Word document"], doc: ["&#128216;", "Word document"],
+    xlsx: ["&#128215;", "Spreadsheet"], zip: ["&#128230;", "ZIP archive"], rar: ["&#128230;", "RAR archive"],
+    md: ["&#128221;", "Markdown"], txt: ["&#128221;", "Text"], html: ["&#127760;", "HTML"],
+    c: ["&#128196;", "C source"], h: ["&#128196;", "C header"], py: ["&#128013;", "Python"],
+    ttf: ["&#128292;", "Font"], otf: ["&#128292;", "Font"], woff2: ["&#128292;", "Font"],
+    pkt: ["&#128423;", "Packet Tracer"], svg: ["&#128444;", "SVG image"],
+  };
+  const $ = id => document.getElementById(id);
+
+  let files = [];          // [{path,size,mtime}]
+  let root = null;         // tree node: {name, path, dirs: Map, files: [], size, mtime}
+  let cwd = "";            // current dir path ("" = root)
+  let hist = [], histPos = -1;
+  let sortK = "name", sortAsc = true;
+  let shown = [];          // rows currently displayed
+  let selected = new Set();// paths of selected rows (dirs end with "/")
+
+  const ext = p => { const n = p.split("/").pop(); const i = n.lastIndexOf("."); return i > 0 ? n.slice(i + 1).toLowerCase() : n.toLowerCase(); };
+  const url = p => p.split("/").map(encodeURIComponent).join("/");
+  const esc = s => s.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const fmtSize = b => {
+    if (b < 1024) return b + " bytes";
+    const u = ["KB", "MB", "GB"]; let i = -1;
+    do { b /= 1024; i++; } while (b >= 1024 && i < u.length - 1);
+    return b.toFixed(b < 10 ? 2 : 1) + " " + u[i];
+  };
+  const fmtDate = d => {
+    if (!d) return "";
+    const t = new Date(d);
+    return t.toLocaleString("en-GB", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+  };
+  const typeOf = e => e.dir ? ["&#128193;", "Folder"] : (TYPES[ext(e.path)] || (IMG_EXT.has(ext(e.path)) ? ["&#128444;", "Image"] : TEXT_EXT.has(ext(e.path)) ? ["&#128196;", "Text"] : ["&#128196;", ext(e.path).toUpperCase() + " file"]));
+
+  function buildTree() {
+    root = { name: "", path: "", dirs: new Map(), files: [], size: 0, mtime: null };
+    for (const f of files) {
+      const parts = f.path.split("/");
+      let node = root;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const p = parts.slice(0, i + 1).join("/");
+        if (!node.dirs.has(parts[i])) node.dirs.set(parts[i], { name: parts[i], path: p, dirs: new Map(), files: [], size: 0, mtime: null });
+        node = node.dirs.get(parts[i]);
+      }
+      node.files.push({ ...f, name: parts[parts.length - 1] });
+    }
+    (function agg(n) {
+      let s = 0, m = null;
+      for (const d of n.dirs.values()) { agg(d); s += d.size; if (d.mtime && (!m || d.mtime > m)) m = d.mtime; }
+      for (const f of n.files) { s += f.size; if (f.mtime && (!m || f.mtime > m)) m = f.mtime; }
+      n.size = s; n.mtime = m;
+    })(root);
+  }
+
+  function nodeAt(path) {
+    if (!path) return root;
+    let n = root;
+    for (const part of path.split("/")) { n = n.dirs.get(part); if (!n) return null; }
+    return n;
+  }
+
+  // ---------- tree ----------
+  function renderTree() {
+    const open = new Set(cwd ? cwd.split("/").map((_, i, a) => a.slice(0, i + 1).join("/")) : []);
+    const mk = n => {
+      const li = document.createElement("li");
+      const kids = [...n.dirs.values()].sort((a, b) => a.name.localeCompare(b.name));
+      const isOpen = n === root || open.has(n.path);
+      if (!isOpen) li.className = "closed";
+      const div = document.createElement("div");
+      if (n.path === cwd) div.className = "active";
+      div.innerHTML = `<span class="tw">${kids.length ? (isOpen ? "&#9660;" : "&#9654;") : ""}</span><span class="ico">${n === root ? "&#127968;" : "&#128193;"}</span><span dir="auto">${esc(n === root ? "/ (root)" : n.name)}</span>`;
+      div.onclick = e => {
+        if (e.target.classList.contains("tw") && kids.length) {
+          li.classList.toggle("closed");
+          e.target.innerHTML = li.classList.contains("closed") ? "&#9654;" : "&#9660;";
+        } else go(n.path);
+      };
+      li.appendChild(div);
+      if (kids.length) { const ul = document.createElement("ul"); kids.forEach(k => ul.appendChild(mk(k))); li.appendChild(ul); }
+      return li;
+    };
+    const ul = document.createElement("ul");
+    ul.appendChild(mk(root));
+    $("tree").replaceChildren(ul);
+  }
+
+  // ---------- list ----------
+  function entriesFor(node) {
+    const q = $("q").value.trim().toLowerCase();
+    if (q) {
+      return files.filter(f => f.path.toLowerCase().includes(q)).map(f => ({ ...f, name: f.path, dir: false }));
+    }
+    return [
+      ...[...node.dirs.values()].map(d => ({ name: d.name, path: d.path, size: d.size, mtime: d.mtime, dir: true })),
+      ...node.files.map(f => ({ ...f, dir: false })),
+    ];
+  }
+
+  function renderList() {
+    const node = nodeAt(cwd);
+    const list = entriesFor(node);
+    const cmp = {
+      name: (a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }),
+      size: (a, b) => a.size - b.size,
+      mtime: (a, b) => (a.mtime || "").localeCompare(b.mtime || ""),
+      type: (a, b) => typeOf(a)[1].localeCompare(typeOf(b)[1]),
+    }[sortK];
+    list.sort((a, b) => (b.dir - a.dir) || (sortAsc ? cmp(a, b) : -cmp(a, b)));
+    shown = list;
+
+    document.querySelectorAll("thead th[data-k]").forEach(th => {
+      th.querySelector(".arrow").innerHTML = th.dataset.k === sortK ? (sortAsc ? "&#9650;" : "&#9660;") : "";
+    });
+
+    const tb = $("rows");
+    tb.replaceChildren();
+    for (const e of list) {
+      const key = e.dir ? e.path + "/" : e.path;
+      const [ico, type] = typeOf(e);
+      const tr = document.createElement("tr");
+      if (selected.has(key)) tr.className = "sel";
+      tr.innerHTML = `
+        <td class="chk"><input type="checkbox" ${selected.has(key) ? "checked" : ""}></td>
+        <td class="name" title="${esc(e.path)}"><span class="ico">${ico}</span><a href="${e.dir ? "#/" + url(e.path) : url(e.path)}" dir="auto">${esc(e.name)}</a></td>
+        <td class="size">${fmtSize(e.size)}</td>
+        <td class="muted">${fmtDate(e.mtime)}</td>
+        <td class="type muted">${type}</td>`;
+      const cb = tr.querySelector("input");
+      cb.onclick = ev => { ev.stopPropagation(); toggle(key, cb.checked); };
+      tr.onclick = ev => {
+        if (ev.target.closest("a")) return;
+        if (!ev.ctrlKey && !ev.metaKey) selected.clear();
+        toggle(key, !selected.has(key) || !(ev.ctrlKey || ev.metaKey));
+      };
+      tr.ondblclick = () => open(e);
+      tr.querySelector("a").onclick = ev => { ev.preventDefault(); open(e); };
+      tb.appendChild(tr);
+    }
+    $("empty").hidden = list.length > 0;
+    $("empty").textContent = $("q").value.trim() ? "No files match your search." : "This directory is empty.";
+
+    const nd = list.filter(e => e.dir).length;
+    $("stat").textContent = `${nd} folder(s), ${list.length - nd} file(s) — ${fmtSize(list.reduce((s, e) => s + e.size, 0))}`;
+    updateSel();
+  }
+
+  function toggle(key, on) {
+    on ? selected.add(key) : selected.delete(key);
+    renderList();
+  }
+
+  function updateSel() {
+    const items = selectedItems();
+    $("selstat").textContent = items.length ? `${items.length} selected` : "";
+    const oneFile = items.length === 1 && !items[0].dir;
+    $("bView").disabled = !(items.length === 1);
+    $("bDl").disabled = !oneFile;
+    $("bZip").disabled = items.length === 0;
+    $("chkAll").checked = shown.length > 0 && items.length === shown.length;
+  }
+
+  const selectedItems = () => shown.filter(e => selected.has(e.dir ? e.path + "/" : e.path));
+
+  // ---------- navigation ----------
+  function renderCrumbs() {
+    const parts = cwd ? cwd.split("/") : [];
+    let html = `<a data-p="">&#127968; root</a>`;
+    parts.forEach((p, i) => { html += `<span class="s">/</span><a data-p="${esc(parts.slice(0, i + 1).join("/"))}" dir="auto">${esc(p)}</a>`; });
+    $("crumbs").innerHTML = html;
+    $("crumbs").querySelectorAll("a").forEach(a => a.onclick = () => go(a.dataset.p));
+  }
+
+  function go(path, push = true) {
+    if (!nodeAt(path)) path = "";
+    if (push && path !== cwd) {
+      hist = hist.slice(0, histPos + 1); hist.push(path); histPos = hist.length - 1;
+    }
+    cwd = path;
+    selected.clear();
+    $("q").value = "";
+    const h = "#/" + url(path);
+    if (location.hash !== h) history.replaceState(null, "", h);
+    document.title = (path ? path.split("/").pop() + " — " : "") + "File Manager";
+    render();
+  }
+
+  function render() {
+    renderCrumbs(); renderTree(); renderList();
+    $("bUp").disabled = !cwd;
+    $("bBack").disabled = histPos <= 0;
+    $("bFwd").disabled = histPos >= hist.length - 1;
+  }
+
+  function open(e) {
+    if (e.dir) return go(e.path);
+    const x = ext(e.path);
+    if (x === "pdf" || x === "html" || x === "htm") return window.open(url(e.path), "_blank");
+    if (IMG_EXT.has(x) || TEXT_EXT.has(x) || e.size < 200 * 1024 && !TYPES[x]) return view(e);
+    download(e);
+  }
+
+  async function view(e) {
+    const x = ext(e.path), u = url(e.path);
+    $("mTitle").textContent = e.path;
+    $("mOpen").href = u; $("mDl").href = u; $("mDl").setAttribute("download", e.path.split("/").pop());
+    const body = $("mBody");
+    body.innerHTML = "<pre>Loading…</pre>";
+    $("modal").classList.add("open");
+    if (IMG_EXT.has(x)) { body.innerHTML = `<img src="${u}" alt="">`; return; }
+    if (x === "pdf" || x === "html" || x === "htm") { body.innerHTML = `<iframe src="${u}"></iframe>`; return; }
+    try {
+      const r = await fetch(u);
+      if (!r.ok) throw new Error(r.status + " " + r.statusText);
+      const buf = await r.arrayBuffer();
+      const txt = new TextDecoder("utf-8").decode(buf);
+      if (/\u0000/.test(txt.slice(0, 4000))) { body.innerHTML = `<pre>Binary file — use Download.</pre>`; return; }
+      const pre = document.createElement("pre"); pre.textContent = txt; body.replaceChildren(pre);
+    } catch (err) { body.innerHTML = `<pre>Could not load file: ${esc(String(err.message || err))}</pre>`; }
+  }
+
+  function closeModal() { $("modal").classList.remove("open"); $("mBody").replaceChildren(); }
+
+  function download(e) {
+    const a = document.createElement("a");
+    a.href = url(e.path); a.download = e.path.split("/").pop();
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  function loadScript(src) {
+    return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  }
+
+  async function zipSelected() {
+    const items = selectedItems();
+    if (!items.length) return;
+    const btn = $("bZip"), label = btn.innerHTML;
+    btn.disabled = true;
+    try {
+      if (!window.JSZip) await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js");
+      const zip = new JSZip();
+      const base = cwd ? cwd + "/" : "";
+      const list = [];
+      for (const it of items) {
+        if (it.dir) files.filter(f => f.path.startsWith(it.path + "/")).forEach(f => list.push(f.path));
+        else list.push(it.path);
+      }
+      let done = 0;
+      for (const p of list) {
+        btn.innerHTML = `&#8987; ${++done}/${list.length}`;
+        const r = await fetch(url(p));
+        if (!r.ok) throw new Error(p + ": " + r.status);
+        zip.file(p.startsWith(base) && !$("q").value.trim() ? p.slice(base.length) : p, await r.arrayBuffer());
+      }
+      btn.innerHTML = "&#8987; zipping…";
+      const blob = await zip.generateAsync({ type: "blob" });
+      const name = (items.length === 1 ? items[0].name.split("/").pop().replace(/\.[^.]+$/, "") : (cwd.split("/").pop() || "files")) + ".zip";
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    } catch (err) {
+      alert("ZIP failed: " + (err.message || err));
+    } finally {
+      btn.innerHTML = label; updateSel();
+    }
+  }
+
+  // ---------- wiring ----------
+  $("bHome").onclick = () => go("");
+  $("bUp").onclick = () => go(cwd.split("/").slice(0, -1).join("/"));
+  $("bBack").onclick = () => { if (histPos > 0) go(hist[--histPos], false); };
+  $("bFwd").onclick = () => { if (histPos < hist.length - 1) go(hist[++histPos], false); };
+  $("bReload").onclick = () => load(true);
+  $("bSelAll").onclick = () => { shown.forEach(e => selected.add(e.dir ? e.path + "/" : e.path)); renderList(); };
+  $("bUnsel").onclick = () => { selected.clear(); renderList(); };
+  $("chkAll").onclick = ev => { ev.target.checked ? $("bSelAll").onclick() : $("bUnsel").onclick(); };
+  $("bView").onclick = () => { const [e] = selectedItems(); if (e) e.dir ? go(e.path) : view(e); };
+  $("bDl").onclick = () => { const [e] = selectedItems(); if (e) download(e); };
+  $("bZip").onclick = zipSelected;
+  $("q").oninput = () => { selected.clear(); renderList(); };
+  document.querySelectorAll("thead th[data-k]").forEach(th => th.onclick = () => {
+    if (sortK === th.dataset.k) sortAsc = !sortAsc; else { sortK = th.dataset.k; sortAsc = true; }
+    renderList();
+  });
+  $("mClose").onclick = closeModal;
+  $("modal").onclick = ev => { if (ev.target.id === "modal") closeModal(); };
+  document.addEventListener("keydown", ev => {
+    if (ev.key === "Escape") closeModal();
+    else if (ev.key === "Backspace" && document.activeElement !== $("q") && cwd) $("bUp").onclick();
+  });
+  window.addEventListener("hashchange", () => {
+    const p = decodeURIComponent(location.hash.replace(/^#\/?/, "")).replace(/\/$/, "");
+    if (p !== cwd) go(p);
+  });
+
+  async function load(reload) {
+    try {
+      const r = await fetch("files.json", { cache: reload ? "reload" : "default" });
+      const data = await r.json();
+      files = data.files;
+      $("gen").textContent = data.generated ? "Updated " + fmtDate(data.generated) : "";
+    } catch (err) {
+      $("rows").innerHTML = `<tr><td colspan="5" class="empty">Could not load files.json: ${esc(String(err))}</td></tr>`;
+      return;
+    }
+    buildTree();
+    const start = decodeURIComponent(location.hash.replace(/^#\/?/, "")).replace(/\/$/, "");
+    if (reload) render(); else go(nodeAt(start) ? start : "");
+  }
+
+  const gh = location.hostname.match(/^([^.]+)\.github\.io$/);
+  if (gh) {
+    const repo = location.pathname.split("/")[1];
+    $("repo").innerHTML = `<a href="https://github.com/${esc(gh[1])}/${esc(repo)}" target="_blank" rel="noopener">github.com/${esc(gh[1])}/${esc(repo)}</a>`;
+  }
+  load(false);
+})();
+</script>
+</body>
+</html>

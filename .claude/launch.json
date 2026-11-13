@@ -4,8 +4,30 @@
     {
       "name": "os-lab-report",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8765", "--bind", "127.0.0.1", "--directory", "OS-Lab/hw2_40130112106/report"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8765",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "OS-Lab/hw2_40130112106/report"
+      ],
       "port": 8765
+    },
+    {
+      "name": "file-manager",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8766",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "_site"
+      ],
+      "port": 8766
     }
   ]
 }
