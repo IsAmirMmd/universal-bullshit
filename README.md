@@ -9,6 +9,7 @@
 | آز شبکه | [`Network-Lab`](Network-Lab/) |
 | آز سیستم‌عامل | [`OS-Lab`](OS-Lab/) |
 | آز FPGA | [`FPGA-Lab`](FPGA-Lab/) |
+| بینایی کامپیوتر | [`Computer-vision`](Computer-vision/) |
 
 ## گزارش‌ها
 
