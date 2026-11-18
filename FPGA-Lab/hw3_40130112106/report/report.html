@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>گزارش آزمایش ۳، ALU سه‌بیتی</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700;800&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+:root {
+  box-sizing: border-box; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px);
+  --bg:#f6f7f5; --surface:#ffffff; --fg:#1b1f1d; --muted:#5d6662; --line:#dde2df; --code-bg:#eef1ef; --accent:#12a33a;
+  --c-kw:#7a3e9d; --c-ty:#0b6e99; --c-str:#a15c00; --c-com:#6f7a75;
+  --f-body:"Vazirmatn", Tahoma, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", "DejaVu Sans Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg:#0e1110; --surface:#161a18; --fg:#e4e9e6; --muted:#98a39e; --line:#2a302d; --code-bg:#1a1f1d; --accent:#3ddc6b;
+  --c-kw:#c792ea; --c-ty:#5ac8e8; --c-str:#f0a04b; --c-com:#7d8a84; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg:#0e1110; --surface:#161a18; --fg:#e4e9e6; --muted:#98a39e; --line:#2a302d; --code-bg:#1a1f1d; --accent:#3ddc6b;
+  --c-kw:#c792ea; --c-ty:#5ac8e8; --c-str:#f0a04b; --c-com:#7d8a84; color-scheme: dark; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body { margin:0; background:var(--bg); color:var(--fg); font-family:var(--f-body); font-size:16px; line-height:1.95;
+  padding: 36px max(16px, env(safe-area-inset-left, 0px)) 72px max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 900px; margin: 0 auto; display:flex; flex-direction:column; gap:44px; }
+header h1 { font-size:1.8rem; font-weight:800; line-height:1.5; margin:0 0 4px; text-wrap:balance; }
+header p { margin:0; color:var(--muted); }
+section { display:flex; flex-direction:column; gap:14px; min-width:0; }
+h2 { font-size:1.3rem; font-weight:700; margin:0; padding-bottom:6px; border-bottom:2px solid var(--line); }
+p { margin:0; }
+p.l { padding-right:14px; border-right:3px solid var(--accent); max-width:72ch; }
+code.m { font-family:var(--f-mono); font-size:.86em; direction:ltr; unicode-bidi:isolate; background:var(--code-bg); padding:1px 6px; border-radius:4px; }
+pre.code { margin:0; direction:ltr; text-align:left; background:var(--code-bg); border:1px solid var(--line); border-radius:8px; padding:14px 16px;
+  overflow-x:auto; font-family:var(--f-mono); font-size:13px; line-height:1.6; tab-size:4; }
+pre.code code { font-family:inherit; }
+.k { color:var(--c-kw); } .t { color:var(--c-ty); } .s { color:var(--c-str); } .c { color:var(--c-com); font-style:italic; }
+figure { margin:0; display:flex; flex-direction:column; gap:8px; }
+.shot { overflow-x:auto; border-radius:6px; background:#000; direction:ltr; }
+.shot svg { display:block; width:100%; min-width:760px; height:auto; }
+figcaption { font-size:14px; color:var(--muted); }
+@media print { body { background:#fff; color:#000; padding:0; } .shot { overflow:visible; } .shot svg { min-width:0; } figure { break-inside:avoid; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>گزارش آزمایش ۳، ALU سه‌بیتی</h1>
+  <p>شماره‌ی دانشجویی: <code class="m">40130112106</code></p>
+  <p>فایل‌ها: <code class="m">alu3.vhd</code> و <code class="m">tb_alu3.vhd</code></p>
+</header>
+
+<section>
+  <h2>توضیح کد</h2>
+<p class="l">ماژول <code class="m">alu3</code> مداری ترکیبی و بدون کلاک است. این ماژول دو ورودی سه‌بیتی <code class="m">a</code> و <code class="m">b</code> و ورودی دوبیتی <code class="m">op</code> را می‌گیرد و با دستور <code class="m">case</code>، بسته به مقدار <code class="m">op</code>، یکی از چهار عملیات <code class="m">ADD</code>، <code class="m">SUB</code>، <code class="m">AND</code> و <code class="m">XOR</code> را انجام می‌دهد.</p>
+<p class="l">در <code class="m">ADD</code> و <code class="m">SUB</code> به ابتدای هر دو عملوند صفر اضافه می‌شود تا محاسبه در متغیر چهاربیتی <code class="m">sum4</code> انجام شود. سه بیت پایین <code class="m">sum4</code> خروجی <code class="m">result</code> را می‌سازد و بیت چهارم در <code class="m">carry</code> قرار می‌گیرد که در <code class="m">SUB</code> همان <code class="m">borrow</code> است.</p>
+<p class="l">پرچم <code class="m">overflow</code> فقط در <code class="m">ADD</code> و <code class="m">SUB</code> و زمانی فعال می‌شود که علامت حاصل در نمایش <code class="m">signed</code> با علامت عملوندها سازگار نباشد. در <code class="m">AND</code> و <code class="m">XOR</code> عملیات بیت‌به‌بیت است و <code class="m">carry</code> و <code class="m">overflow</code> مقدار پیش‌فرض صفر را که در ابتدای <code class="m">process</code> داده شده نگه می‌دارند؛ همین مقدارهای پیش‌فرض از ساخته‌شدن <code class="m">latch</code> هم جلوگیری می‌کنند.</p>
+<p class="l">پرچم‌های <code class="m">zero</code> و <code class="m">negative</code> از سیگنال داخلی <code class="m">res</code> و پرچم <code class="m">equal</code> از مقایسه‌ی مستقیم <code class="m">a</code> و <code class="m">b</code> به دست می‌آیند. در <code class="m">testbench</code> ابتدا دوازده حالت منتخب، هر کدام به مدت ۱۵ نانوثانیه، اعمال می‌شود و سپس هر ۲۵۶ ترکیب ممکن با مدل مرجع مقایسه می‌شود.</p>
+</section>
+
+<section>
+  <h2>کد اصلی <code class="m">alu3.vhd</code></h2>
+  <pre class="code" dir="ltr"><code><span class="c">----------------------------------------------------------------------------------</span>
+<span class="c">-- 3-bit ALU with status flags (combinational, no clock)</span>
+<span class="c">--</span>
+<span class="c">-- All 8 inputs fit on the 8 slide switches, no push buttons needed:</span>
+<span class="c">--   a(2:0)  -&gt; SW7..SW5</span>
+<span class="c">--   b(2:0)  -&gt; SW4..SW2</span>
+<span class="c">--   op(1:0) -&gt; SW1..SW0</span>
+<span class="c">-- All 8 outputs go to the 8 LEDs:</span>
+<span class="c">--   result(2:0) -&gt; LD2..LD0</span>
+<span class="c">--   carry, zero, negative, overflow, equal -&gt; LD3..LD7</span>
+<span class="c">--</span>
+<span class="c">-- op  operation   result        carry flag</span>
+<span class="c">-- 00  ADD         a + b         carry out of bit 2</span>
+<span class="c">-- 01  SUB         a - b         '1' = borrow (a &lt; b)</span>
+<span class="c">-- 10  AND         a and b       '0'</span>
+<span class="c">-- 11  XOR         a xor b       '0'</span>
+<span class="c">--</span>
+<span class="c">-- zero     = '1' when result = 000</span>
+<span class="c">-- negative = result(2)  (sign bit in two's complement, range -4 .. +3)</span>
+<span class="c">-- overflow = signed overflow, only for ADD and SUB</span>
+<span class="c">-- equal    = '1' when a = b  (works for every op)</span>
+<span class="c">----------------------------------------------------------------------------------</span>
+<span class="k">library</span> IEEE;
+<span class="k">use</span> IEEE.STD_LOGIC_1164.<span class="k">ALL</span>;
+<span class="k">use</span> IEEE.NUMERIC_STD.<span class="k">ALL</span>;
+
+<span class="k">entity</span> alu3 <span class="k">is</span>
+    <span class="k">Port</span> ( a        : <span class="k">in</span>  <span class="t">STD_LOGIC_VECTOR</span> (2 <span class="k">downto</span> 0);
+           b        : <span class="k">in</span>  <span class="t">STD_LOGIC_VECTOR</span> (2 <span class="k">downto</span> 0);
+           op       : <span class="k">in</span>  <span class="t">STD_LOGIC_VECTOR</span> (1 <span class="k">downto</span> 0);
+           result   : <span class="k">out</span> <span class="t">STD_LOGIC_VECTOR</span> (2 <span class="k">downto</span> 0);
+           carry    : <span class="k">out</span> <span class="t">STD_LOGIC</span>;
+           zero     : <span class="k">out</span> <span class="t">STD_LOGIC</span>;
+           negative : <span class="k">out</span> <span class="t">STD_LOGIC</span>;
+           overflow : <span class="k">out</span> <span class="t">STD_LOGIC</span>;
+           equal    : <span class="k">out</span> <span class="t">STD_LOGIC</span>);
+<span class="k">end</span> alu3;
+
+<span class="k">architecture</span> Behavioral <span class="k">of</span> alu3 <span class="k">is</span>
+
+    <span class="c">-- internal copy of the result, because an "out" port cannot be read</span>
+    <span class="c">-- in VHDL-93 and the zero / negative flags need to read it</span>
+    <span class="k">signal</span> res : <span class="t">STD_LOGIC_VECTOR</span> (2 <span class="k">downto</span> 0);
+
+<span class="k">begin</span>
+
+    alu_proc : <span class="k">process</span> (a, b, op)
+        <span class="k">variable</span> sum4 : <span class="t">unsigned</span> (3 <span class="k">downto</span> 0);   <span class="c">-- one extra bit for the carry</span>
+    <span class="k">begin</span>
+        <span class="c">-- default values, so every output gets a value in every branch</span>
+        <span class="c">-- (this also prevents latches in synthesis)</span>
+        res      &lt;= (<span class="k">others</span> =&gt; <span class="s">'0'</span>);
+        carry    &lt;= <span class="s">'0'</span>;
+        overflow &lt;= <span class="s">'0'</span>;
+
+        <span class="k">case</span> op <span class="k">is</span>
+            <span class="k">when</span> <span class="s">"00"</span> =&gt;                                     <span class="c">-- ADD</span>
+                <span class="c">-- example: 011 + 001 = 100, carry = 0</span>
+                <span class="c">--          3 + 1 = 4 does not fit in -4..3 -&gt; overflow = 1</span>
+                sum4  := (<span class="s">'0'</span> &amp; <span class="t">unsigned</span>(a)) + (<span class="s">'0'</span> &amp; <span class="t">unsigned</span>(b));
+                res   &lt;= <span class="t">std_logic_vector</span>(sum4(2 <span class="k">downto</span> 0));
+                carry &lt;= sum4(3);
+                <span class="c">-- same signs in, different sign out -&gt; signed overflow</span>
+                <span class="k">if</span> a(2) = b(2) <span class="k">and</span> sum4(2) /= a(2) <span class="k">then</span>
+                    overflow &lt;= <span class="s">'1'</span>;
+                <span class="k">end</span> <span class="k">if</span>;
+
+            <span class="k">when</span> <span class="s">"01"</span> =&gt;                                     <span class="c">-- SUB</span>
+                <span class="c">-- example: 010 - 101 = 101, borrow -&gt; carry = 1</span>
+                <span class="c">--          2 - (-3) = 5 does not fit in -4..3 -&gt; overflow = 1</span>
+                sum4  := (<span class="s">'0'</span> &amp; <span class="t">unsigned</span>(a)) - (<span class="s">'0'</span> &amp; <span class="t">unsigned</span>(b));
+                res   &lt;= <span class="t">std_logic_vector</span>(sum4(2 <span class="k">downto</span> 0));
+                carry &lt;= sum4(3);                            <span class="c">-- borrow</span>
+                <span class="c">-- different signs in, result sign differs from a -&gt; overflow</span>
+                <span class="k">if</span> a(2) /= b(2) <span class="k">and</span> sum4(2) /= a(2) <span class="k">then</span>
+                    overflow &lt;= <span class="s">'1'</span>;
+                <span class="k">end</span> <span class="k">if</span>;
+
+            <span class="k">when</span> <span class="s">"10"</span> =&gt;                                     <span class="c">-- AND</span>
+                <span class="c">-- example: 110 and 011 = 010 (bit by bit)</span>
+                res &lt;= a <span class="k">and</span> b;
+
+            <span class="k">when</span> <span class="s">"11"</span> =&gt;                                     <span class="c">-- XOR</span>
+                <span class="c">-- example: 110 xor 011 = 101 (1 where the bits differ)</span>
+                res &lt;= a <span class="k">xor</span> b;
+
+            <span class="k">when</span> <span class="k">others</span> =&gt;
+                res &lt;= (<span class="k">others</span> =&gt; <span class="s">'0'</span>);
+        <span class="k">end</span> <span class="k">case</span>;
+    <span class="k">end</span> <span class="k">process</span>;
+
+    <span class="c">-- flags that depend only on the result or the inputs</span>
+    result   &lt;= res;
+    zero     &lt;= <span class="s">'1'</span> <span class="k">when</span> res = <span class="s">"000"</span> <span class="k">else</span> <span class="s">'0'</span>;
+    negative &lt;= res(2);
+    equal    &lt;= <span class="s">'1'</span> <span class="k">when</span> a = b <span class="k">else</span> <span class="s">'0'</span>;
+
+<span class="k">end</span> Behavioral;</code></pre>
+</section>
+
+<section>
+  <h2>testbench <code class="m">tb_alu3.vhd</code></h2>
+  <pre class="code" dir="ltr"><code><span class="c">----------------------------------------------------------------------------------</span>
+<span class="c">-- Testbench for alu3</span>
+<span class="c">-- Part 1 (0 - 180 ns): hand-picked cases, 15 ns each. Show this part in the waveform.</span>
+<span class="c">-- Part 2 (after 180 ns): every a, b and op combination (4 x 64 = 256 cases)</span>
+<span class="c">--                      checked against a reference model.</span>
+<span class="c">-- The console shows TEST PASSED or the number of errors. Use "Run All".</span>
+<span class="c">----------------------------------------------------------------------------------</span>
+<span class="k">library</span> IEEE;
+<span class="k">use</span> IEEE.STD_LOGIC_1164.<span class="k">ALL</span>;
+<span class="k">use</span> IEEE.NUMERIC_STD.<span class="k">ALL</span>;
+
+<span class="k">entity</span> tb_alu3 <span class="k">is</span>
+<span class="k">end</span> tb_alu3;
+
+<span class="k">architecture</span> behavior <span class="k">of</span> tb_alu3 <span class="k">is</span>
+
+    <span class="k">component</span> alu3
+        <span class="k">Port</span> ( a        : <span class="k">in</span>  <span class="t">STD_LOGIC_VECTOR</span> (2 <span class="k">downto</span> 0);
+               b        : <span class="k">in</span>  <span class="t">STD_LOGIC_VECTOR</span> (2 <span class="k">downto</span> 0);
+               op       : <span class="k">in</span>  <span class="t">STD_LOGIC_VECTOR</span> (1 <span class="k">downto</span> 0);
+               result   : <span class="k">out</span> <span class="t">STD_LOGIC_VECTOR</span> (2 <span class="k">downto</span> 0);
+               carry    : <span class="k">out</span> <span class="t">STD_LOGIC</span>;
+               zero     : <span class="k">out</span> <span class="t">STD_LOGIC</span>;
+               negative : <span class="k">out</span> <span class="t">STD_LOGIC</span>;
+               overflow : <span class="k">out</span> <span class="t">STD_LOGIC</span>;
+               equal    : <span class="k">out</span> <span class="t">STD_LOGIC</span>);
+    <span class="k">end</span> <span class="k">component</span>;
+
+    <span class="k">signal</span> a, b     : <span class="t">STD_LOGIC_VECTOR</span> (2 <span class="k">downto</span> 0) := <span class="s">"000"</span>;
+    <span class="k">signal</span> op       : <span class="t">STD_LOGIC_VECTOR</span> (1 <span class="k">downto</span> 0) := <span class="s">"00"</span>;
+    <span class="k">signal</span> result   : <span class="t">STD_LOGIC_VECTOR</span> (2 <span class="k">downto</span> 0);
+    <span class="k">signal</span> carry, zero, negative, overflow, equal : <span class="t">STD_LOGIC</span>;
+
+<span class="k">begin</span>
+
+    uut : alu3 <span class="k">port</span> <span class="k">map</span> (a, b, op, result, carry, zero, negative, overflow, equal);
+
+    stim : <span class="k">process</span>
+        <span class="k">variable</span> n_err  : <span class="t">integer</span> := 0;
+        <span class="k">variable</span> ri, si : <span class="t">integer</span>;
+        <span class="k">variable</span> e_res  : <span class="t">STD_LOGIC_VECTOR</span> (2 <span class="k">downto</span> 0);
+        <span class="k">variable</span> e_c, e_v, e_eq : <span class="t">STD_LOGIC</span>;
+
+        <span class="c">-- apply one case, wait, compare every output with the reference model</span>
+        <span class="k">procedure</span> check (va, vb : <span class="k">in</span> <span class="t">STD_LOGIC_VECTOR</span> (2 <span class="k">downto</span> 0);
+                         vop    : <span class="k">in</span> <span class="t">STD_LOGIC_VECTOR</span> (1 <span class="k">downto</span> 0);
+                         dt     : <span class="k">in</span> <span class="t">time</span>) <span class="k">is</span>
+        <span class="k">begin</span>
+            a &lt;= va; b &lt;= vb; op &lt;= vop;
+            <span class="k">wait</span> <span class="k">for</span> dt;
+            e_c := <span class="s">'0'</span>; e_v := <span class="s">'0'</span>;
+            <span class="k">case</span> vop <span class="k">is</span>
+                <span class="k">when</span> <span class="s">"00"</span> =&gt;
+                    ri := to_integer(<span class="t">unsigned</span>(va)) + to_integer(<span class="t">unsigned</span>(vb));
+                    si := to_integer(<span class="t">signed</span>(va)) + to_integer(<span class="t">signed</span>(vb));
+                    <span class="k">if</span> ri &gt; 7 <span class="k">then</span> e_c := <span class="s">'1'</span>; <span class="k">end</span> <span class="k">if</span>;
+                    <span class="k">if</span> si &gt; 3 <span class="k">or</span> si &lt; -4 <span class="k">then</span> e_v := <span class="s">'1'</span>; <span class="k">end</span> <span class="k">if</span>;
+                    e_res := <span class="t">std_logic_vector</span>(to_unsigned(ri mod 8, 3));
+                <span class="k">when</span> <span class="s">"01"</span> =&gt;
+                    ri := to_integer(<span class="t">unsigned</span>(va)) - to_integer(<span class="t">unsigned</span>(vb));
+                    si := to_integer(<span class="t">signed</span>(va)) - to_integer(<span class="t">signed</span>(vb));
+                    <span class="k">if</span> ri &lt; 0 <span class="k">then</span> e_c := <span class="s">'1'</span>; <span class="k">end</span> <span class="k">if</span>;
+                    <span class="k">if</span> si &gt; 3 <span class="k">or</span> si &lt; -4 <span class="k">then</span> e_v := <span class="s">'1'</span>; <span class="k">end</span> <span class="k">if</span>;
+                    e_res := <span class="t">std_logic_vector</span>(to_unsigned(ri mod 8, 3));
+                <span class="k">when</span> <span class="s">"10"</span> =&gt;
+                    e_res := va <span class="k">and</span> vb;
+                <span class="k">when</span> <span class="k">others</span> =&gt;
+                    e_res := va <span class="k">xor</span> vb;
+            <span class="k">end</span> <span class="k">case</span>;
+            <span class="k">if</span> va = vb <span class="k">then</span> e_eq := <span class="s">'1'</span>; <span class="k">else</span> e_eq := <span class="s">'0'</span>; <span class="k">end</span> <span class="k">if</span>;
+            <span class="k">if</span> result /= e_res <span class="k">or</span> carry /= e_c <span class="k">or</span> overflow /= e_v
+               <span class="k">or</span> negative /= e_res(2) <span class="k">or</span> equal /= e_eq
+               <span class="k">or</span> (zero = <span class="s">'1'</span>) /= (e_res = <span class="s">"000"</span>) <span class="k">then</span>
+                n_err := n_err + 1;
+                <span class="k">report</span> <span class="s">"MISMATCH at "</span> &amp; <span class="t">time</span>'image(now) <span class="k">severity</span> error;
+            <span class="k">end</span> <span class="k">if</span>;
+        <span class="k">end</span> <span class="k">procedure</span>;
+
+    <span class="k">begin</span>
+        <span class="c">-- Part 1: readable cases for the waveform</span>
+        check(<span class="s">"001"</span>, <span class="s">"010"</span>, <span class="s">"00"</span>, 15 ns);   <span class="c">-- ADD 1 + 2 = 3</span>
+        check(<span class="s">"011"</span>, <span class="s">"001"</span>, <span class="s">"00"</span>, 15 ns);   <span class="c">-- ADD 3 + 1 = 100   -&gt; overflow, negative</span>
+        check(<span class="s">"111"</span>, <span class="s">"001"</span>, <span class="s">"00"</span>, 15 ns);   <span class="c">-- ADD 7 + 1 = 000   -&gt; carry, zero</span>
+        check(<span class="s">"110"</span>, <span class="s">"010"</span>, <span class="s">"01"</span>, 15 ns);   <span class="c">-- SUB 6 - 2 = 100</span>
+        check(<span class="s">"010"</span>, <span class="s">"101"</span>, <span class="s">"01"</span>, 15 ns);   <span class="c">-- SUB 2 - 5 = 101   -&gt; borrow, overflow</span>
+        check(<span class="s">"011"</span>, <span class="s">"011"</span>, <span class="s">"01"</span>, 15 ns);   <span class="c">-- SUB 3 - 3 = 000   -&gt; zero, equal</span>
+        check(<span class="s">"110"</span>, <span class="s">"011"</span>, <span class="s">"10"</span>, 15 ns);   <span class="c">-- AND = 010</span>
+        check(<span class="s">"101"</span>, <span class="s">"010"</span>, <span class="s">"10"</span>, 15 ns);   <span class="c">-- AND = 000         -&gt; zero</span>
+        check(<span class="s">"110"</span>, <span class="s">"011"</span>, <span class="s">"11"</span>, 15 ns);   <span class="c">-- XOR = 101</span>
+        check(<span class="s">"101"</span>, <span class="s">"101"</span>, <span class="s">"11"</span>, 15 ns);   <span class="c">-- XOR = 000         -&gt; zero, equal</span>
+        check(<span class="s">"100"</span>, <span class="s">"000"</span>, <span class="s">"00"</span>, 15 ns);   <span class="c">-- ADD -4 + 0 = 100  -&gt; negative</span>
+        check(<span class="s">"000"</span>, <span class="s">"000"</span>, <span class="s">"00"</span>, 15 ns);   <span class="c">-- ADD 0 + 0 = 000   -&gt; zero, equal</span>
+
+        <span class="c">-- Part 2: exhaustive check</span>
+        <span class="k">for</span> o <span class="k">in</span> 0 <span class="k">to</span> 3 <span class="k">loop</span>
+            <span class="k">for</span> x <span class="k">in</span> 0 <span class="k">to</span> 7 <span class="k">loop</span>
+                <span class="k">for</span> y <span class="k">in</span> 0 <span class="k">to</span> 7 <span class="k">loop</span>
+                    check(<span class="t">std_logic_vector</span>(to_unsigned(x, 3)),
+                          <span class="t">std_logic_vector</span>(to_unsigned(y, 3)),
+                          <span class="t">std_logic_vector</span>(to_unsigned(o, 2)), 1 ns);
+                <span class="k">end</span> <span class="k">loop</span>;
+            <span class="k">end</span> <span class="k">loop</span>;
+        <span class="k">end</span> <span class="k">loop</span>;
+
+        <span class="k">if</span> n_err = 0 <span class="k">then</span>
+            <span class="k">report</span> <span class="s">"TEST PASSED (268 cases)"</span> <span class="k">severity</span> note;
+        <span class="k">else</span>
+            <span class="k">report</span> <span class="s">"TEST FAILED, errors = "</span> &amp; <span class="t">integer</span>'image(n_err) <span class="k">severity</span> error;
+        <span class="k">end</span> <span class="k">if</span>;
+        <span class="k">wait</span>;
+    <span class="k">end</span> <span class="k">process</span>;
+
+<span class="k">end</span> behavior;</code></pre>
+</section>
+
+<section>
+  <h2>شکل موج</h2>
+  <figure>
+    <div class="shot"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 994 348" width="994" height="348" role="img" aria-label="شکل موج tb_alu3 از 0 تا 180 نانوثانیه" font-family="IBM Plex Mono, DejaVu Sans Mono, Consolas, monospace"><rect width="994" height="348" fill="#000"/><line x1="190" y1="0" x2="190" y2="294" stroke="#4a4a4a"/><line x1="260" y1="0" x2="260" y2="294" stroke="#4a4a4a"/><line x1="0" y1="24" x2="994" y2="24" stroke="#4a4a4a"/><text x="8" y="16" font-size="11" fill="#9a9a9a">Name</text><text x="254" y="16" font-size="11" fill="#9a9a9a" text-anchor="end">Msgs</text><line x1="262" y1="24" x2="262" y2="294" stroke="#555" stroke-width="1" /><line x1="322" y1="24" x2="322" y2="294" stroke="#3a3a3a" stroke-width="1" stroke-dasharray="2 3"/><line x1="382" y1="24" x2="382" y2="294" stroke="#555" stroke-width="1" /><line x1="442" y1="24" x2="442" y2="294" stroke="#3a3a3a" stroke-width="1" stroke-dasharray="2 3"/><line x1="502" y1="24" x2="502" y2="294" stroke="#555" stroke-width="1" /><line x1="562" y1="24" x2="562" y2="294" stroke="#3a3a3a" stroke-width="1" stroke-dasharray="2 3"/><line x1="622" y1="24" x2="622" y2="294" stroke="#555" stroke-width="1" /><line x1="682" y1="24" x2="682" y2="294" stroke="#3a3a3a" stroke-width="1" stroke-dasharray="2 3"/><line x1="742" y1="24" x2="742" y2="294" stroke="#555" stroke-width="1" /><line x1="802" y1="24" x2="802" y2="294" stroke="#3a3a3a" stroke-width="1" stroke-dasharray="2 3"/><line x1="862" y1="24" x2="862" y2="294" stroke="#555" stroke-width="1" /><line x1="922" y1="24" x2="922" y2="294" stroke="#3a3a3a" stroke-width="1" stroke-dasharray="2 3"/><line x1="982" y1="24" x2="982" y2="294" stroke="#555" stroke-width="1" /><polygon points="14,34.0 19,39.0 14,44.0 9,39.0" fill="#4aa0ff"/><text x="28" y="43.0" font-size="12" fill="#e0e0e0">/tb_alu3/a</text><text x="254" y="43.0" font-size="12" fill="#a0a0a0" text-anchor="end">010</text><path d="M262.0 30.0H319.0M262.0 48.0H319.0M319.0 30.0L325.0 48.0M319.0 48.0L325.0 30.0M325.0 30.0H379.0M325.0 48.0H379.0M379.0 30.0L385.0 48.0M379.0 48.0L385.0 30.0M385.0 30.0H439.0M385.0 48.0H439.0M439.0 30.0L445.0 48.0M439.0 48.0L445.0 30.0M445.0 30.0H499.0M445.0 48.0H499.0M499.0 30.0L505.0 48.0M499.0 48.0L505.0 30.0M505.0 30.0H559.0M505.0 48.0H559.0M559.0 30.0L565.0 48.0M559.0 48.0L565.0 30.0M565.0 30.0H619.0M565.0 48.0H619.0M619.0 30.0L625.0 48.0M619.0 48.0L625.0 30.0M625.0 30.0H679.0M625.0 48.0H679.0M679.0 30.0L685.0 48.0M679.0 48.0L685.0 30.0M685.0 30.0H739.0M685.0 48.0H739.0M739.0 30.0L745.0 48.0M739.0 48.0L745.0 30.0M745.0 30.0H799.0M745.0 48.0H799.0M799.0 30.0L805.0 48.0M799.0 48.0L805.0 30.0M805.0 30.0H859.0M805.0 48.0H859.0M859.0 30.0L865.0 48.0M859.0 48.0L865.0 30.0M865.0 30.0H919.0M865.0 48.0H919.0M919.0 30.0L925.0 48.0M919.0 48.0L925.0 30.0M925.0 30.0H982.0M925.0 48.0H982.0" fill="none" stroke="#22ee22" stroke-width="1.4"/><text x="292.0" y="43.0" font-size="12" fill="#22ee22" text-anchor="middle">001</text><text x="352.0" y="43.0" font-size="12" fill="#22ee22" text-anchor="middle">011</text><text x="412.0" y="43.0" font-size="12" fill="#22ee22" text-anchor="middle">111</text><text x="472.0" y="43.0" font-size="12" fill="#22ee22" text-anchor="middle">110</text><text x="532.0" y="43.0" font-size="12" fill="#22ee22" text-anchor="middle">010</text><text x="592.0" y="43.0" font-size="12" fill="#22ee22" text-anchor="middle">011</text><text x="652.0" y="43.0" font-size="12" fill="#22ee22" text-anchor="middle">110</text><text x="712.0" y="43.0" font-size="12" fill="#22ee22" text-anchor="middle">101</text><text x="772.0" y="43.0" font-size="12" fill="#22ee22" text-anchor="middle">110</text><text x="832.0" y="43.0" font-size="12" fill="#22ee22" text-anchor="middle">101</text><text x="892.0" y="43.0" font-size="12" fill="#22ee22" text-anchor="middle">100</text><text x="952.0" y="43.0" font-size="12" fill="#22ee22" text-anchor="middle">000</text><polygon points="14,64.0 19,69.0 14,74.0 9,69.0" fill="#4aa0ff"/><text x="28" y="73.0" font-size="12" fill="#e0e0e0">/tb_alu3/b</text><text x="254" y="73.0" font-size="12" fill="#a0a0a0" text-anchor="end">101</text><path d="M262.0 60.0H319.0M262.0 78.0H319.0M319.0 60.0L325.0 78.0M319.0 78.0L325.0 60.0M325.0 60.0H439.0M325.0 78.0H439.0M439.0 60.0L445.0 78.0M439.0 78.0L445.0 60.0M445.0 60.0H499.0M445.0 78.0H499.0M499.0 60.0L505.0 78.0M499.0 78.0L505.0 60.0M505.0 60.0H559.0M505.0 78.0H559.0M559.0 60.0L565.0 78.0M559.0 78.0L565.0 60.0M565.0 60.0H679.0M565.0 78.0H679.0M679.0 60.0L685.0 78.0M679.0 78.0L685.0 60.0M685.0 60.0H739.0M685.0 78.0H739.0M739.0 60.0L745.0 78.0M739.0 78.0L745.0 60.0M745.0 60.0H799.0M745.0 78.0H799.0M799.0 60.0L805.0 78.0M799.0 78.0L805.0 60.0M805.0 60.0H859.0M805.0 78.0H859.0M859.0 60.0L865.0 78.0M859.0 78.0L865.0 60.0M865.0 60.0H982.0M865.0 78.0H982.0" fill="none" stroke="#22ee22" stroke-width="1.4"/><text x="292.0" y="73.0" font-size="12" fill="#22ee22" text-anchor="middle">010</text><text x="382.0" y="73.0" font-size="12" fill="#22ee22" text-anchor="middle">001</text><text x="472.0" y="73.0" font-size="12" fill="#22ee22" text-anchor="middle">010</text><text x="532.0" y="73.0" font-size="12" fill="#22ee22" text-anchor="middle">101</text><text x="622.0" y="73.0" font-size="12" fill="#22ee22" text-anchor="middle">011</text><text x="712.0" y="73.0" font-size="12" fill="#22ee22" text-anchor="middle">010</text><text x="772.0" y="73.0" font-size="12" fill="#22ee22" text-anchor="middle">011</text><text x="832.0" y="73.0" font-size="12" fill="#22ee22" text-anchor="middle">101</text><text x="922.0" y="73.0" font-size="12" fill="#22ee22" text-anchor="middle">000</text><polygon points="14,94.0 19,99.0 14,104.0 9,99.0" fill="#4aa0ff"/><text x="28" y="103.0" font-size="12" fill="#e0e0e0">/tb_alu3/op</text><text x="254" y="103.0" font-size="12" fill="#a0a0a0" text-anchor="end">01</text><path d="M262.0 90.0H439.0M262.0 108.0H439.0M439.0 90.0L445.0 108.0M439.0 108.0L445.0 90.0M445.0 90.0H619.0M445.0 108.0H619.0M619.0 90.0L625.0 108.0M619.0 108.0L625.0 90.0M625.0 90.0H739.0M625.0 108.0H739.0M739.0 90.0L745.0 108.0M739.0 108.0L745.0 90.0M745.0 90.0H859.0M745.0 108.0H859.0M859.0 90.0L865.0 108.0M859.0 108.0L865.0 90.0M865.0 90.0H982.0M865.0 108.0H982.0" fill="none" stroke="#22ee22" stroke-width="1.4"/><text x="352.0" y="103.0" font-size="12" fill="#22ee22" text-anchor="middle">00</text><text x="532.0" y="103.0" font-size="12" fill="#22ee22" text-anchor="middle">01</text><text x="682.0" y="103.0" font-size="12" fill="#22ee22" text-anchor="middle">10</text><text x="802.0" y="103.0" font-size="12" fill="#22ee22" text-anchor="middle">11</text><text x="922.0" y="103.0" font-size="12" fill="#22ee22" text-anchor="middle">00</text><polygon points="14,124.0 19,129.0 14,134.0 9,129.0" fill="#4aa0ff"/><text x="28" y="133.0" font-size="12" fill="#e0e0e0">/tb_alu3/result</text><text x="254" y="133.0" font-size="12" fill="#a0a0a0" text-anchor="end">101</text><path d="M262.0 120.0H319.0M262.0 138.0H319.0M319.0 120.0L325.0 138.0M319.0 138.0L325.0 120.0M325.0 120.0H379.0M325.0 138.0H379.0M379.0 120.0L385.0 138.0M379.0 138.0L385.0 120.0M385.0 120.0H439.0M385.0 138.0H439.0M439.0 120.0L445.0 138.0M439.0 138.0L445.0 120.0M445.0 120.0H499.0M445.0 138.0H499.0M499.0 120.0L505.0 138.0M499.0 138.0L505.0 120.0M505.0 120.0H559.0M505.0 138.0H559.0M559.0 120.0L565.0 138.0M559.0 138.0L565.0 120.0M565.0 120.0H619.0M565.0 138.0H619.0M619.0 120.0L625.0 138.0M619.0 138.0L625.0 120.0M625.0 120.0H679.0M625.0 138.0H679.0M679.0 120.0L685.0 138.0M679.0 138.0L685.0 120.0M685.0 120.0H739.0M685.0 138.0H739.0M739.0 120.0L745.0 138.0M739.0 138.0L745.0 120.0M745.0 120.0H799.0M745.0 138.0H799.0M799.0 120.0L805.0 138.0M799.0 138.0L805.0 120.0M805.0 120.0H859.0M805.0 138.0H859.0M859.0 120.0L865.0 138.0M859.0 138.0L865.0 120.0M865.0 120.0H919.0M865.0 138.0H919.0M919.0 120.0L925.0 138.0M919.0 138.0L925.0 120.0M925.0 120.0H982.0M925.0 138.0H982.0" fill="none" stroke="#00e5ee" stroke-width="1.4"/><text x="292.0" y="133.0" font-size="12" fill="#00e5ee" text-anchor="middle">011</text><text x="352.0" y="133.0" font-size="12" fill="#00e5ee" text-anchor="middle">100</text><text x="412.0" y="133.0" font-size="12" fill="#00e5ee" text-anchor="middle">000</text><text x="472.0" y="133.0" font-size="12" fill="#00e5ee" text-anchor="middle">100</text><text x="532.0" y="133.0" font-size="12" fill="#00e5ee" text-anchor="middle">101</text><text x="592.0" y="133.0" font-size="12" fill="#00e5ee" text-anchor="middle">000</text><text x="652.0" y="133.0" font-size="12" fill="#00e5ee" text-anchor="middle">010</text><text x="712.0" y="133.0" font-size="12" fill="#00e5ee" text-anchor="middle">000</text><text x="772.0" y="133.0" font-size="12" fill="#00e5ee" text-anchor="middle">101</text><text x="832.0" y="133.0" font-size="12" fill="#00e5ee" text-anchor="middle">000</text><text x="892.0" y="133.0" font-size="12" fill="#00e5ee" text-anchor="middle">100</text><text x="952.0" y="133.0" font-size="12" fill="#00e5ee" text-anchor="middle">000</text><polygon points="14,154.0 19,159.0 14,164.0 9,159.0" fill="#4aa0ff"/><text x="28" y="163.0" font-size="12" fill="#e0e0e0">/tb_alu3/carry</text><text x="254" y="163.0" font-size="12" fill="#a0a0a0" text-anchor="end">1</text><path d="M262.0 168.0H382.0V150.0H442.0V168.0H502.0V150.0H562.0V168.0H982.0" fill="none" stroke="#00e5ee" stroke-width="1.6"/><polygon points="14,184.0 19,189.0 14,194.0 9,189.0" fill="#4aa0ff"/><text x="28" y="193.0" font-size="12" fill="#e0e0e0">/tb_alu3/zero</text><text x="254" y="193.0" font-size="12" fill="#a0a0a0" text-anchor="end">0</text><path d="M262.0 198.0H382.0V180.0H442.0V198.0H562.0V180.0H622.0V198.0H682.0V180.0H742.0V198.0H802.0V180.0H862.0V198.0H922.0V180.0H982.0" fill="none" stroke="#00e5ee" stroke-width="1.6"/><polygon points="14,214.0 19,219.0 14,224.0 9,219.0" fill="#4aa0ff"/><text x="28" y="223.0" font-size="12" fill="#e0e0e0">/tb_alu3/negative</text><text x="254" y="223.0" font-size="12" fill="#a0a0a0" text-anchor="end">1</text><path d="M262.0 228.0H322.0V210.0H382.0V228.0H442.0V210.0H562.0V228.0H742.0V210.0H802.0V228.0H862.0V210.0H922.0V228.0H982.0" fill="none" stroke="#00e5ee" stroke-width="1.6"/><polygon points="14,244.0 19,249.0 14,254.0 9,249.0" fill="#4aa0ff"/><text x="28" y="253.0" font-size="12" fill="#e0e0e0">/tb_alu3/overflow</text><text x="254" y="253.0" font-size="12" fill="#a0a0a0" text-anchor="end">1</text><path d="M262.0 258.0H322.0V240.0H382.0V258.0H502.0V240.0H562.0V258.0H982.0" fill="none" stroke="#00e5ee" stroke-width="1.6"/><polygon points="14,274.0 19,279.0 14,284.0 9,279.0" fill="#4aa0ff"/><text x="28" y="283.0" font-size="12" fill="#e0e0e0">/tb_alu3/equal</text><text x="254" y="283.0" font-size="12" fill="#a0a0a0" text-anchor="end">0</text><path d="M262.0 288.0H562.0V270.0H622.0V288.0H802.0V270.0H862.0V288.0H922.0V270.0H982.0" fill="none" stroke="#00e5ee" stroke-width="1.6"/><line x1="0" y1="294" x2="994" y2="294" stroke="#4a4a4a"/><line x1="262" y1="295" x2="982" y2="295" stroke="#1ec81e" stroke-width="1.4"/><line x1="262" y1="295" x2="262" y2="305" stroke="#1ec81e"/><text x="265" y="319" font-size="11" fill="#1ec81e" text-anchor="start">0 ns</text><line x1="322" y1="295" x2="322" y2="300" stroke="#1ec81e"/><line x1="382" y1="295" x2="382" y2="305" stroke="#1ec81e"/><text x="382" y="319" font-size="11" fill="#1ec81e" text-anchor="middle">30 ns</text><line x1="442" y1="295" x2="442" y2="300" stroke="#1ec81e"/><line x1="502" y1="295" x2="502" y2="305" stroke="#1ec81e"/><text x="502" y="319" font-size="11" fill="#1ec81e" text-anchor="middle">60 ns</text><line x1="562" y1="295" x2="562" y2="300" stroke="#1ec81e"/><line x1="622" y1="295" x2="622" y2="305" stroke="#1ec81e"/><text x="622" y="319" font-size="11" fill="#1ec81e" text-anchor="middle">90 ns</text><line x1="682" y1="295" x2="682" y2="300" stroke="#1ec81e"/><line x1="742" y1="295" x2="742" y2="305" stroke="#1ec81e"/><text x="742" y="319" font-size="11" fill="#1ec81e" text-anchor="middle">120 ns</text><line x1="802" y1="295" x2="802" y2="300" stroke="#1ec81e"/><line x1="862" y1="295" x2="862" y2="305" stroke="#1ec81e"/><text x="862" y="319" font-size="11" fill="#1ec81e" text-anchor="middle">150 ns</text><line x1="922" y1="295" x2="922" y2="300" stroke="#1ec81e"/><line x1="982" y1="295" x2="982" y2="305" stroke="#1ec81e"/><text x="982" y="319" font-size="11" fill="#1ec81e" text-anchor="middle">180 ns</text><text x="10" y="313" font-size="12" fill="#e0e0e0">Now</text><rect x="120" y="300" width="130" height="18" fill="#000" stroke="#6a6a6a"/><text x="185" y="313" font-size="12" fill="#e0e0e0" text-anchor="middle">180 ns</text><text x="10" y="337" font-size="12" fill="#e0e0e0">Cursor 1</text><rect x="120" y="324" width="130" height="18" fill="#000" stroke="#6a6a6a"/><text x="185" y="337" font-size="12" fill="#ffe000" text-anchor="middle">70 ns</text><line x1="542" y1="24" x2="542" y2="325" stroke="#ffe000" stroke-width="1.2"/><rect x="514" y="325" width="56" height="18" fill="#000" stroke="#ffe000"/><text x="542" y="338" font-size="12" fill="#ffe000" text-anchor="middle">70 ns</text></svg></div>
+    <figcaption>بخش اول <code class="m">testbench</code> از ۰ تا ۱۸۰ نانوثانیه (دوازده حالت، هر کدام ۱۵ نانوثانیه). ستون <code class="m">Msgs</code> مقدار سیگنال‌ها را در محل <code class="m">cursor</code>، یعنی ۷۰ نانوثانیه، نشان می‌دهد.</figcaption>
+  </figure>
+</section>
+</div>
+</body>
+</html>
